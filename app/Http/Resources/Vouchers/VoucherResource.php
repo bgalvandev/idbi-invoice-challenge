@@ -19,20 +19,24 @@ class VoucherResource extends JsonResource
     {
         return [
             'id' => $this->resource->id,
+            'type' => $this->resource->type,
+            'serie' => $this->resource->serie,
+            'number' => $this->resource->number,
             'issuer_name' => $this->resource->issuer_name,
             'issuer_document_type' => $this->resource->issuer_document_type,
             'issuer_document_number' => $this->resource->issuer_document_number,
             'receiver_name' => $this->resource->receiver_name,
             'receiver_document_type' => $this->resource->receiver_document_type,
             'receiver_document_number' => $this->resource->receiver_document_number,
+            'currency' => $this->resource->currency,
             'total_amount' => $this->resource->total_amount,
             'user' => $this->whenLoaded(
                 'user',
-                fn () => UserResource::make($this->resource->user),
+                fn() => UserResource::make($this->resource->user),
             ),
             'lines' => $this->whenLoaded(
                 'lines',
-                fn () => VoucherLineResource::collection($this->resource->lines),
+                fn() => VoucherLineResource::collection($this->resource->lines),
             ),
         ];
     }
