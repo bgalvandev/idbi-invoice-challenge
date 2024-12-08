@@ -110,10 +110,23 @@ class VoucherService
             'failed_vouchers' => [],
         ];
 
-        Voucher::whereNull('type')
-            ->orWhereNull('serie')
-            ->orWhereNull('number')
-            ->orWhereNull('currency')
+        Voucher::where(function ($query) {
+            $query->whereNull('type')
+                ->orWhere('type', '')
+                ->orWhere('type', 0);
+        })
+            ->orWhere(function ($query) {
+                $query->whereNull('serie')
+                    ->orWhere('serie', '');
+            })
+            ->orWhere(function ($query) {
+                $query->whereNull('number')
+                    ->orWhere('number', 0);
+            })
+            ->orWhere(function ($query) {
+                $query->whereNull('currency')
+                    ->orWhere('currency', '');
+            })
             ->chunk(100, function ($vouchers) use (&$processed, &$details) {
                 foreach ($vouchers as $voucher) {
                     try {
