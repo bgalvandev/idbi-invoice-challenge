@@ -3,12 +3,15 @@
 namespace App\Services;
 
 use App\Events\Vouchers\VouchersCreated;
+use Carbon\Carbon;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Models\VoucherLine;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use SimpleXMLElement;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class VoucherService
 {
@@ -19,9 +22,14 @@ class VoucherService
         $this->validator = $validator;
     }
 
-    public function getVouchers(int $page, int $paginate): LengthAwarePaginator
+    public function getVouchers(int $page, int $paginate, array $filters, User $user): LengthAwarePaginator
     {
-        return Voucher::with(['lines', 'user'])->paginate(perPage: $paginate, page: $page);
+        $query = Voucher::with(['lines', 'user'])
+            ->where('user_id', $user->id);
+
+        $this->applyFilters($query, $filters);
+
+        return $query->paginate($paginate, ['*'], 'page', $page);
     }
 
     /**
@@ -160,5 +168,31 @@ class VoucherService
             'user' => $userData,
             'data' => $totals,
         ]);
+    }
+
+    private function applyFilters(Builder $query, array $filters): void
+    {
+        if (!empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        if (!empty($filters['serie'])) {
+            $query->where('serie', $filters['serie']);
+        }
+
+        if (!empty($filters['number'])) {
+            $query->where('number', $filters['number']);
+        }
+
+        if (!empty($filters['currency'])) {
+            $query->where('currency', $filters['currency']);
+        }
+
+        if (!empty($filters['start_date']) && !empty($filters['end_date'])) {
+            $query->whereBetween('created_at', [
+                Carbon::parse($filters['start_date'])->startOfDay(),
+                Carbon::parse($filters['end_date'])->endOfDay(),
+            ]);
+        }
     }
 }
