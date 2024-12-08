@@ -65,4 +65,9 @@ class Voucher extends Model
     {
         return $this->hasMany(VoucherLine::class);
     }
+
+    public function scopeForUser($query, $userId)
+    {
+        return $query->where('user_id', $userId)->whereNull('deleted_at');
+    }
 }

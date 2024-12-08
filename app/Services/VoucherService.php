@@ -8,6 +8,7 @@ use App\Models\Voucher;
 use App\Models\VoucherLine;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use SimpleXMLElement;
+use Illuminate\Support\Facades\DB;
 
 class VoucherService
 {
@@ -141,5 +142,23 @@ class VoucherService
             'processed' => $processed,
             'details' => $details,
         ];
+    }
+
+    public function getTotalAmounts(User $user)
+    {
+        $totals = Voucher::forUser($user->id)
+            ->select('currency', DB::raw('SUM(total_amount) as total_amount'))
+            ->groupBy('currency')
+            ->get();
+
+        $userData = [
+            'id' => $user->id,
+            'name' => $user->name . ' ' . $user->last_name
+        ];
+
+        return response()->json([
+            'user' => $userData,
+            'data' => $totals,
+        ]);
     }
 }
