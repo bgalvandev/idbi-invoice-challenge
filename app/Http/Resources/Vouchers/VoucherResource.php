@@ -19,9 +19,7 @@ class VoucherResource extends JsonResource
     {
         return [
             'id' => $this->resource->id,
-            'type' => $this->resource->type,
-            'serie' => $this->resource->serie,
-            'number' => $this->resource->number,
+            'voucher' => $this->voucherFormat(),
             'issuer_name' => $this->resource->issuer_name,
             'issuer_document_type' => $this->resource->issuer_document_type,
             'issuer_document_number' => $this->resource->issuer_document_number,
@@ -39,5 +37,14 @@ class VoucherResource extends JsonResource
                 fn() => VoucherLineResource::collection($this->resource->lines),
             ),
         ];
+    }
+
+    private function voucherFormat(): string
+    {
+        $type = str_pad($this->resource->type, 2, '0', STR_PAD_LEFT);
+        $serie = str_pad($this->resource->serie, 5, '0', STR_PAD_LEFT);
+        $number = str_pad($this->resource->number, 7, '0', STR_PAD_LEFT);
+
+        return "{$type}-{$serie}-{$number}";
     }
 }

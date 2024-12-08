@@ -11,6 +11,13 @@ use SimpleXMLElement;
 
 class VoucherService
 {
+    protected $validator;
+
+    public function __construct(VoucherValidator $validator)
+    {
+        $this->validator = $validator;
+    }
+
     public function getVouchers(int $page, int $paginate): LengthAwarePaginator
     {
         return Voucher::with(['lines', 'user'])->paginate(perPage: $paginate, page: $page);
@@ -21,53 +28,43 @@ class VoucherService
      * @param User $user
      * @return Voucher[]
      */
-    public function storeVouchersFromXmlContents(array $xmlContents, User $user): array
-    {
-        $vouchers = [];
-        foreach ($xmlContents as $xmlContent) {
-            $vouchers[] = $this->storeVoucherFromXmlContent($xmlContent, $user);
-        }
-
-        VouchersCreated::dispatch($vouchers, $user);
-
-        return $vouchers;
-    }
 
     public function storeVoucherFromXmlContent(string $xmlContent, User $user): Voucher
     {
         $xml = new SimpleXMLElement($xmlContent);
 
-        $type = (string) $xml->xpath('//cbc:InvoiceTypeCode')[0];
-        $invoiceId = (string) $xml->xpath('//cbc:ID')[0];
+        $data = [
+            'type' => (string) $xml->xpath('//cbc:InvoiceTypeCode')[0],
+            'invoice_id' => (string) $xml->xpath('//cbc:ID')[0],
+            'currency' => (string) $xml->xpath('//cbc:DocumentCurrencyCode')[0],
+            'issuer_name' => (string) $xml->xpath('//cac:AccountingSupplierParty/cac:Party/cac:PartyName/cbc:Name')[0],
+            'issuer_document_type' => (string) $xml->xpath('//cac:AccountingSupplierParty/cac:Party/cac:PartyIdentification/cbc:ID/@schemeID')[0],
+            'issuer_document_number' => (string) $xml->xpath('//cac:AccountingSupplierParty/cac:Party/cac:PartyIdentification/cbc:ID')[0],
+            'receiver_name' => (string) $xml->xpath('//cac:AccountingCustomerParty/cac:Party/cac:PartyLegalEntity/cbc:RegistrationName')[0],
+            'receiver_document_type' => (string) $xml->xpath('//cac:AccountingCustomerParty/cac:Party/cac:PartyIdentification/cbc:ID/@schemeID')[0],
+            'receiver_document_number' => (string) $xml->xpath('//cac:AccountingCustomerParty/cac:Party/cac:PartyIdentification/cbc:ID')[0],
+            'total_amount' => (string) $xml->xpath('//cac:LegalMonetaryTotal/cbc:TaxInclusiveAmount')[0],
+        ];
 
-        $idParts = explode('-', $invoiceId);
-        $serie = $idParts[0] ?? $invoiceId;
+        $this->validator->validate($data);
+
+        $idParts = explode('-', $data['invoice_id']);
+        $serie = $idParts[0] ?? $data['invoice_id'];
         $number = $idParts[1] ?? '';
 
-        $currency = (string) $xml->xpath('//cbc:DocumentCurrencyCode')[0];
-
-        $issuerName = (string) $xml->xpath('//cac:AccountingSupplierParty/cac:Party/cac:PartyName/cbc:Name')[0];
-        $issuerDocumentType = (string) $xml->xpath('//cac:AccountingSupplierParty/cac:Party/cac:PartyIdentification/cbc:ID/@schemeID')[0];
-        $issuerDocumentNumber = (string) $xml->xpath('//cac:AccountingSupplierParty/cac:Party/cac:PartyIdentification/cbc:ID')[0];
-
-        $receiverName = (string) $xml->xpath('//cac:AccountingCustomerParty/cac:Party/cac:PartyLegalEntity/cbc:RegistrationName')[0];
-        $receiverDocumentType = (string) $xml->xpath('//cac:AccountingCustomerParty/cac:Party/cac:PartyIdentification/cbc:ID/@schemeID')[0];
-        $receiverDocumentNumber = (string) $xml->xpath('//cac:AccountingCustomerParty/cac:Party/cac:PartyIdentification/cbc:ID')[0];
-
-        $totalAmount = (string) $xml->xpath('//cac:LegalMonetaryTotal/cbc:TaxInclusiveAmount')[0];
 
         $voucher = new Voucher([
-            'type' => $type,
+            'type' => $data['type'],
             'serie' => $serie,
             'number' => $number,
-            'currency' => $currency,
-            'issuer_name' => $issuerName,
-            'issuer_document_type' => $issuerDocumentType,
-            'issuer_document_number' => $issuerDocumentNumber,
-            'receiver_name' => $receiverName,
-            'receiver_document_type' => $receiverDocumentType,
-            'receiver_document_number' => $receiverDocumentNumber,
-            'total_amount' => $totalAmount,
+            'currency' => $data['currency'],
+            'issuer_name' => $data['issuer_name'],
+            'issuer_document_type' => $data['issuer_document_type'],
+            'issuer_document_number' => $data['issuer_document_number'],
+            'receiver_name' => $data['receiver_name'],
+            'receiver_document_type' => $data['receiver_document_type'],
+            'receiver_document_number' => $data['receiver_document_number'],
+            'total_amount' => $data['total_amount'],
             'xml_content' => $xmlContent,
             'user_id' => $user->id,
         ]);
